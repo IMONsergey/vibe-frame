@@ -2,7 +2,7 @@
   "name": "Vibe Frame / Frappe Builder",
   "dockerComposeFile": "./docker-compose.yml",
   "service": "frappe",
-  "workspaceFolder": "/workspace",
+  "workspaceFolder": "/workspace/vibe-frame",
   "remoteUser": "frappe",
   "forwardPorts": [8000, 9000, 8080],
   "portsAttributes": {
@@ -19,8 +19,8 @@
       "onAutoForward": "silent"
     }
   },
-  "postCreateCommand": "bash /workspace/scripts/init.sh",
-  "postStartCommand": "bash /workspace/scripts/start.sh",
+  "postCreateCommand": "bash /workspace/vibe-frame/scripts/init.sh",
+  "postStartCommand": "bash /workspace/vibe-frame/scripts/start.sh",
   "shutdownAction": "stopCompose",
   "customizations": {
     "vscode": {
