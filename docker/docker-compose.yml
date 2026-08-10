@@ -26,7 +26,8 @@ services:
 
   frappe:
     image: frappe/bench:latest
-    command: bash /workspace/vibe-frame/docker/init.sh
+    command: >-
+      bash -lc "sudo chown -R frappe:frappe /home/frappe/vibe-data && exec bash /workspace/vibe-frame/docker/init.sh"
     environment:
       SHELL: /bin/bash
       VIBE_FRAME_REPO: /workspace/vibe-frame
