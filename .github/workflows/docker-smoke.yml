@@ -8,13 +8,20 @@ on:
       - "scripts/**"
       - ".devcontainer/**"
       - ".github/workflows/docker-smoke.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "docker/**"
+      - "scripts/**"
+      - ".devcontainer/**"
+      - ".github/workflows/docker-smoke.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: vibe-frame-docker-smoke
+  group: vibe-frame-docker-smoke-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
