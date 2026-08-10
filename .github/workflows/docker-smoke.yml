@@ -85,11 +85,11 @@ jobs:
             set -euo pipefail
             cd /home/frappe/vibe-data/frappe-bench
             bench --site builder.localhost list-apps | tee /tmp/apps.txt
-            grep -qx builder /tmp/apps.txt
-            test -d apps/vibe-frame/.git
-            test -f apps/vibe-frame/builder/__init__.py
+            grep -Eq "^builder([[:space:]]|$)" /tmp/apps.txt
+            test -d apps/builder/.git
+            test -f apps/builder/builder/__init__.py
             ./env/bin/python -c "import builder; print(builder.__file__)"
-            git -C apps/vibe-frame remote -v
+            git -C apps/builder remote -v
           '
 
       - name: Collect Docker logs
