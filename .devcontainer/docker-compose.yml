@@ -46,12 +46,12 @@ services:
     environment:
       SHELL: /bin/bash
       VIBE_FRAME_REPO: /workspace
-      BENCH_DIR: /home/frappe/frappe-bench
+      BENCH_DIR: /home/frappe/vibe-data/frappe-bench
       FRAPPE_BRANCH: version-15
       FRAPPE_SITE: builder.localhost
     volumes:
       - ..:/workspace:cached
-      - bench-data:/home/frappe/frappe-bench
+      - bench-data:/home/frappe/vibe-data
     working_dir: /workspace
     ports:
       - "8000:8000"
