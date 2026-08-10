@@ -46,14 +46,14 @@ services:
       bash -lc "sudo chown -R frappe:frappe /home/frappe/vibe-data && exec sleep infinity"
     environment:
       SHELL: /bin/bash
-      VIBE_FRAME_REPO: /workspace
+      VIBE_FRAME_REPO: /workspace/vibe-frame
       BENCH_DIR: /home/frappe/vibe-data/frappe-bench
       FRAPPE_BRANCH: version-15
       FRAPPE_SITE: builder.localhost
     volumes:
-      - ..:/workspace:cached
+      - ..:/workspace/vibe-frame:cached
       - bench-data:/home/frappe/vibe-data
-    working_dir: /workspace
+    working_dir: /workspace/vibe-frame
     ports:
       - "8000:8000"
       - "9000:9000"
