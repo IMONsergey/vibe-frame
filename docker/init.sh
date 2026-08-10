@@ -6,11 +6,17 @@ REPO_DIR="${VIBE_FRAME_REPO:-/workspace/vibe-frame}"
 SITE="${FRAPPE_SITE:-builder.localhost}"
 FRAPPE_BRANCH="${FRAPPE_BRANCH:-version-15}"
 ADMIN_PASSWORD="${FRAPPE_ADMIN_PASSWORD:-admin}"
+APP_CHECKOUT_NAME="$(basename "$REPO_DIR")"
 
 if [ ! -d "$REPO_DIR/builder" ] || [ ! -f "$REPO_DIR/pyproject.toml" ]; then
   echo "Vibe Frame source was not mounted at $REPO_DIR" >&2
   exit 1
 fi
+
+# GitHub Actions / Docker bind mounts can have a different numeric owner than
+# the frappe user inside the container. Trust only this explicitly mounted repo.
+git config --global --add safe.directory "$REPO_DIR"
+git config --global --add safe.directory "$REPO_DIR/.git"
 
 if [ ! -d "$BENCH_DIR/apps/frappe" ]; then
   echo "Creating Frappe bench on $FRAPPE_BRANCH..."
@@ -32,10 +38,11 @@ sed -i '/redis/d' ./Procfile
 
 # Always refresh Builder from this repository so a container restart cannot
 # silently fall back to frappe/builder or an older checkout.
-if [ -e "$BENCH_DIR/apps/builder" ]; then
+rm -rf "$BENCH_DIR/apps/$APP_CHECKOUT_NAME"
+if [ "$APP_CHECKOUT_NAME" != "builder" ]; then
   rm -rf "$BENCH_DIR/apps/builder"
 fi
-bench get-app --skip-assets builder "$REPO_DIR"
+bench get-app --skip-assets "file://$REPO_DIR"
 
 if [ ! -d "$BENCH_DIR/sites/$SITE" ]; then
   echo "Creating site $SITE..."
