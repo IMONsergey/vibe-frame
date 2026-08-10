@@ -42,7 +42,8 @@ services:
 
   frappe:
     image: frappe/bench:latest
-    command: sleep infinity
+    command: >-
+      bash -lc "sudo chown -R frappe:frappe /home/frappe/vibe-data && exec sleep infinity"
     environment:
       SHELL: /bin/bash
       VIBE_FRAME_REPO: /workspace
