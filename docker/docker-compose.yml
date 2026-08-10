@@ -30,13 +30,14 @@ services:
     environment:
       SHELL: /bin/bash
       VIBE_FRAME_REPO: /workspace/vibe-frame
+      BENCH_DIR: /home/frappe/vibe-data/frappe-bench
       FRAPPE_BRANCH: version-15
       FRAPPE_SITE: builder.localhost
       FRAPPE_ADMIN_PASSWORD: ${FRAPPE_ADMIN_PASSWORD:-admin}
     working_dir: /home/frappe
     volumes:
       - ..:/workspace/vibe-frame
-      - bench-data:/home/frappe/frappe-bench
+      - bench-data:/home/frappe/vibe-data
     ports:
       - "8000:8000"
       - "9000:9000"
