@@ -1,0 +1,175 @@
+import { getConfig } from './config'
+import { request, type RequestOptions } from './request'
+
+declare global {
+  interface Window {
+    csrf_token?: string
+  }
+}
+
+type ServerMessagesHandler = (messages: string[]) => void
+
+export interface FrappeRequestOptions<TResponse = unknown> extends Omit<
+  RequestOptions<TResponse>,
+  'transformRequest' | 'transformResponse' | 'transformError'
+> {
+  onError?: (error: FrappeRequestError) => void
+  onServerMessages?: ServerMessagesHandler
+}
+
+export interface FrappeRequestError extends Error {
+  exc_type?: string
+  exc?: string
+  response?: Response
+  status?: number
+  messages: string[]
+}
+
+type FrappeResponseBody = {
+  docs?: unknown
+  exc?: string
+  exc_type?: string
+  message?: unknown
+  _server_messages?: string
+  _error_message?: string
+}
+
+export function frappeRequest<TResponse = unknown>(
+  options: FrappeRequestOptions<TResponse>,
+) {
+  const originalOptions = options
+  return request({
+    ...options,
+    transformRequest: (options) => {
+      if (!options.url) {
+        throw new Error('[frappeRequest] options.url is required')
+      }
+      let configHeaders = getConfig('requestHeaders') || {}
+      if (typeof configHeaders === 'function') {
+        configHeaders = configHeaders()
+      }
+      let headers = Object.assign(
+        {
+          Accept: 'application/json',
+          'Content-Type': 'application/json; charset=utf-8',
+          // Sent as the local hostname even when requestBaseUrl points at a
+          // remote site. Harmless for dev, but pass a `requestHeaders` override
+          // if you need the remote site name here.
+          'X-Frappe-Site-Name': window.location.hostname,
+        },
+        configHeaders,
+        options.headers || {},
+      )
+      if (window.csrf_token && window.csrf_token !== '{{ csrf_token }}') {
+        headers['X-Frappe-CSRF-Token'] = window.csrf_token
+      }
+      if (!options.url.startsWith('/') && !options.url.startsWith('http')) {
+        options.url = '/api/method/' + options.url
+      }
+      // Prepend a configured base URL to relative URLs for local dev against a
+      // remote instance. Default to `credentials: 'include'` so cookie-based
+      // cross-origin auth works out of the box (the server must then send
+      // Access-Control-Allow-Credentials: true and a non-wildcard origin). If
+      // you authenticate with a token via `requestHeaders` instead, you usually
+      // want cookies omitted — pass `options.credentials: 'omit'` to override.
+      let baseUrl = getConfig('requestBaseUrl')
+      let credentials = options.credentials
+      if (baseUrl && options.url.startsWith('/')) {
+        options.url = baseUrl.replace(/\/$/, '') + options.url
+        credentials = credentials || 'include'
+      }
+      return {
+        ...options,
+        method: options.method || 'POST',
+        headers,
+        credentials,
+      }
+    },
+    transformResponse: async (response, options) => {
+      let url = options.url
+      if (response.ok) {
+        const data = (await response.json()) as FrappeResponseBody
+        if (data.docs || url === '/api/method/login') {
+          return data as TResponse
+        }
+        if (data.exc) {
+          try {
+            console.groupCollapsed(url)
+            console.log(options)
+            let warning = JSON.parse(data.exc)
+            for (let text of warning) {
+              console.log(text)
+            }
+            console.groupEnd()
+          } catch (e) {
+            console.warn('Error printing debug messages', e)
+          }
+        }
+
+        if (data._server_messages) {
+          let onMessageHandler =
+            getConfig('serverMessagesHandler') ||
+            originalOptions.onServerMessages ||
+            null
+          if (onMessageHandler) {
+            onMessageHandler(JSON.parse(data?._server_messages) || [])
+          }
+        }
+
+        return data.message as TResponse
+      } else {
+        let errorResponse = await response.text()
+        let error: FrappeResponseBody = {}
+        let exception
+        try {
+          error = JSON.parse(errorResponse)
+          // eslint-disable-next-line no-empty
+        } catch (e) {}
+        let errorParts = [
+          [options.url, error?.exc_type, error?._error_message]
+            .filter(Boolean)
+            .join(' '),
+        ]
+        if (error.exc) {
+          exception = error.exc
+          try {
+            exception = JSON.parse(exception)[0]
+            console.log(exception)
+            // eslint-disable-next-line no-empty
+          } catch (e) {}
+        }
+        let e = new Error(errorParts.join('\n')) as FrappeRequestError
+        e.exc_type = error.exc_type
+        e.exc = exception
+        e.response = response
+        e.status = response.status
+        e.messages = error._server_messages
+          ? JSON.parse(error._server_messages)
+          : []
+        if (error.message !== undefined) {
+          e.messages = e.messages.concat(error.message as any)
+        }
+        e.messages = e.messages.map((m) => {
+          try {
+            return JSON.parse(m).message
+          } catch (error) {
+            return m
+          }
+        })
+        e.messages = e.messages.filter(Boolean)
+        if (!e.messages.length) {
+          e.messages = error._error_message
+            ? [error._error_message]
+            : ['Internal Server Error']
+        }
+        originalOptions.onError && originalOptions.onError(e)
+        throw e
+      }
+    },
+    transformError: (error) => {
+      originalOptions.onError &&
+        originalOptions.onError(error as FrappeRequestError)
+      throw error
+    },
+  })
+}

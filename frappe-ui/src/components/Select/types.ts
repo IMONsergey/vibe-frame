@@ -1,0 +1,146 @@
+import type { Component } from 'vue'
+import type { InputLabelingProps } from '../../composables/useInputLabeling'
+
+export type SelectOptionValue = string | number | bigint | Record<string, any>
+
+export type SelectOption =
+  | string
+  | {
+      label: string
+      value: SelectOptionValue
+      disabled?: boolean
+      icon?: string | Component
+      description?: string
+      slot?: string
+      [key: string]: any
+    }
+
+export type SelectNormalizedOption = Exclude<SelectOption, string>
+
+export interface SelectProps extends InputLabelingProps {
+  /** Size of the select input. */
+  size?: 'sm' | 'md' | 'lg' | 'xl'
+
+  /** Visual style of the select input. */
+  variant?: 'subtle' | 'outline' | 'ghost'
+
+  /** Placeholder text displayed when no option is selected. */
+  placeholder?: string
+
+  /** If true, disables the select input. */
+  disabled?: boolean
+
+  /** The currently selected value. */
+  modelValue?: SelectOptionValue
+
+  /** Controls the visibility of the select menu. */
+  open?: boolean
+
+  /** Options to display in the dropdown. */
+  options?: SelectOption[]
+
+  /** Fallback empty-state copy rendered when no options are available. */
+  emptyText?: string
+}
+
+export interface SelectTriggerSlotProps {
+  /** Whether the select menu is currently open. */
+  open: boolean
+
+  /** Whether the trigger is disabled. */
+  disabled: boolean
+
+  /** Currently selected option, if any. */
+  selectedOption: SelectNormalizedOption | null
+
+  /** Plain-text label shown in the trigger. */
+  displayValue: string
+
+  /** Clears the current selection (sets the model to `undefined`). */
+  clearSelection: () => void
+}
+
+/**
+ * Shared shape for `#trigger`, `#prefix`, and `#suffix`. `selectedOption`
+ * is always `null` in `#prefix` because the prefix only renders before a
+ * selection — the field is still exposed for slot-prop symmetry across
+ * the trio.
+ */
+export type SelectSlotProps = SelectTriggerSlotProps
+export type SelectPrefixSlotProps = SelectSlotProps
+export type SelectSuffixSlotProps = SelectSlotProps
+
+export interface SelectFooterSlotProps {
+  /** Currently selected option, if any. */
+  selectedOption: SelectNormalizedOption | null
+
+  /** Clears the current selection (sets the model to `undefined`). */
+  clearSelection: () => void
+}
+
+export interface SelectItemSlotProps {
+  /** Item currently being rendered. */
+  item: SelectNormalizedOption
+
+  /**
+   * @deprecated Use `item`. Retained as a silent alias through v1.x for
+   * back-compat with the pre-v1 `{ option }` slot-prop shape.
+   */
+  option: SelectNormalizedOption
+}
+
+export interface SelectSlots {
+  /** Fully custom trigger renderer. */
+  trigger?: (props: SelectTriggerSlotProps) => any
+
+  /** Overrides the rendered label content. Receives `{ required }`. */
+  label?: (props: { required: boolean }) => any
+
+  /** Overrides the rendered description content. */
+  description?: () => any
+
+  /** Content rendered before the trigger value. Receives the same shape
+   * as `#trigger` and `#suffix` (`SelectSlotProps`). */
+  prefix?: (props: SelectPrefixSlotProps) => any
+
+  /**
+   * Content rendered after the trigger value. Providing this slot
+   * **replaces the default chevron** — render your own fallback when
+   * your slot content is conditional.
+   */
+  suffix?: (props: SelectSuffixSlotProps) => any
+
+  /**
+   * Shared renderer for option labels.
+   * @deprecated use `#item-label` for per-row label customization. `#option` remains as a back-compat alias through v1.x.
+   */
+  option?: (props: SelectItemSlotProps) => any
+
+  /** Content rendered before the standard option label. */
+  'item-prefix'?: (props: SelectItemSlotProps) => any
+
+  /** Content rendered for the standard option label area. */
+  'item-label'?: (props: SelectItemSlotProps) => any
+
+  /** Content rendered after the standard option label. */
+  'item-suffix'?: (props: SelectItemSlotProps) => any
+
+  /** Fallback content rendered when no options are available. */
+  empty?: () => any
+
+  /** Content rendered below the option list. Stays pinned below the
+   * scrollable options. */
+  footer?: (props: SelectFooterSlotProps) => any
+
+  [slotName: string]: ((props: any) => any) | undefined
+}
+
+export interface SelectEmits {
+  /** Fired when the selected value changes. */
+  'update:modelValue': [value: SelectOptionValue | undefined]
+
+  /** Fired when the open state changes. */
+  'update:open': [value: boolean]
+}
+
+export interface SelectExposed {}

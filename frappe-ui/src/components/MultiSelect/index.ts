@@ -1,0 +1,21 @@
+export { default as MultiSelect } from './MultiSelect.vue'
+export type {
+  MultiSelectEmits,
+  MultiSelectEmptySlotProps,
+  MultiSelectFooterSlotProps,
+  MultiSelectGroupLabelSlotProps,
+  MultiSelectGroupedOption,
+  MultiSelectItemSlotProps,
+  MultiSelectItemSlots,
+  MultiSelectOption,
+  MultiSelectOptions,
+  MultiSelectPrefixSlotProps,
+  MultiSelectProps,
+  MultiSelectSize,
+  MultiSelectSlotProps,
+  MultiSelectSlots,
+  MultiSelectSuffixSlotProps,
+  MultiSelectSummarySlotProps,
+  MultiSelectTriggerSlotProps,
+  MultiSelectVariant,
+} from './types'
