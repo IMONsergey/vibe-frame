@@ -1,42 +1,62 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-BENCH_DIR="/home/frappe/frappe-bench"
-SITE="builder.localhost"
+BENCH_DIR="${BENCH_DIR:-/home/frappe/frappe-bench}"
+REPO_DIR="${VIBE_FRAME_REPO:-/workspace/vibe-frame}"
+SITE="${FRAPPE_SITE:-builder.localhost}"
+FRAPPE_BRANCH="${FRAPPE_BRANCH:-version-15}"
+ADMIN_PASSWORD="${FRAPPE_ADMIN_PASSWORD:-admin}"
 
-# Reuse an existing bench if one is already provisioned.
-if [ -d "$BENCH_DIR/apps/frappe" ]; then
-    echo "Bench already exists, skipping init"
-    cd "$BENCH_DIR"
-    bench start
-    exit 0
+if [ ! -d "$REPO_DIR/builder" ] || [ ! -f "$REPO_DIR/pyproject.toml" ]; then
+  echo "Vibe Frame source was not mounted at $REPO_DIR" >&2
+  exit 1
 fi
 
-echo "Creating new bench..."
-bench init --skip-redis-config-generation frappe-bench --version version-15
-cd frappe-bench
+if [ ! -d "$BENCH_DIR/apps/frappe" ]; then
+  echo "Creating Frappe bench on $FRAPPE_BRANCH..."
+  cd "$(dirname "$BENCH_DIR")"
+  bench init \
+    --skip-redis-config-generation \
+    --frappe-branch "$FRAPPE_BRANCH" \
+    "$(basename "$BENCH_DIR")"
+fi
 
-# Point services at the compose containers instead of localhost.
+cd "$BENCH_DIR"
+
+echo "Configuring compose services..."
 bench set-mariadb-host mariadb
 bench set-redis-cache-host "redis://redis:6379"
 bench set-redis-queue-host "redis://redis:6379"
 bench set-redis-socketio-host "redis://redis:6379"
-
-# Remove redis/watch entries from the Procfile (handled by compose).
 sed -i '/redis/d' ./Procfile
-sed -i '/watch/d' ./Procfile
 
-bench get-app builder --branch develop
+# Always refresh Builder from this repository so a container restart cannot
+# silently fall back to frappe/builder or an older checkout.
+if [ -e "$BENCH_DIR/apps/builder" ]; then
+  rm -rf "$BENCH_DIR/apps/builder"
+fi
+bench get-app --skip-assets builder "$REPO_DIR"
 
-bench new-site "$SITE" \
-    --force \
+if [ ! -d "$BENCH_DIR/sites/$SITE" ]; then
+  echo "Creating site $SITE..."
+  bench new-site "$SITE" \
     --mariadb-root-password 123 \
-    --admin-password admin \
+    --admin-password "$ADMIN_PASSWORD" \
     --no-mariadb-socket
+fi
 
-bench --site "$SITE" install-app builder
+if ! bench --site "$SITE" list-apps | grep -qx builder; then
+  bench --site "$SITE" install-app builder
+fi
+
 bench --site "$SITE" set-config developer_mode 1
 bench --site "$SITE" set-config mute_emails 1
 bench --site "$SITE" clear-cache
 bench use "$SITE"
 
-bench start
+# get-app is intentionally run with --skip-assets so the build step is explicit
+# and failures are visible in Docker/Actions logs.
+bench build --app builder
+
+echo "Vibe Frame is ready on http://builder.localhost:8000"
+exec bench start
